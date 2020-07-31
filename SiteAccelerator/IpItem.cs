@@ -1,5 +1,4 @@
-﻿using System.Net.NetworkInformation;
-using System.Threading.Tasks;
+﻿using System;
 
 namespace SiteAccelerator
 {
@@ -9,10 +8,10 @@ namespace SiteAccelerator
 
         public string Sign { get; set; }
 
-        public async Task<PingReply> PingAsync()
+        public Uri ToIpUri(Uri site)
         {
-            using var ping = new Ping();
-            return await ping.SendPingAsync(this.Ip);
-        }
+            var uri = $"{site.Scheme}://{Ip}:{site.Port}{site.PathAndQuery}";
+            return new Uri(uri);
+        } 
     }
 }

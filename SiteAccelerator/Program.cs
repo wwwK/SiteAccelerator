@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using WebApiClient;
+using System.ComponentModel.DataAnnotations;
+using System.Net.Http;
 
 namespace SiteAccelerator
 {
@@ -31,8 +32,15 @@ namespace SiteAccelerator
                 .UseWindowsService()
                 .ConfigureServices((hosting, services) =>
                 {
-                    services.Configure<DomainOptions>(hosting.Configuration.GetSection(nameof(DomainOptions)));
-                    services.AddHttpApi<Iip138Api>();
+                    services.Configure<SitesOptions>(hosting.Configuration.GetSection(nameof(SitesOptions)));
+                    services.AddHttpApi<IIp138Api>();
+                    services.AddHttpApi<ISiteTestApi>().ConfigurePrimaryHttpMessageHandler(() =>
+                    {
+                        return new HttpClientHandler
+                        {
+                            ServerCertificateCustomValidationCallback = (a, b, c, d) => true
+                        };
+                    });
                     services.AddHostedService<HostedService>();
                 });
         }

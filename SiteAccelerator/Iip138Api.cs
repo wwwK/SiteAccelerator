@@ -1,15 +1,29 @@
 ﻿using System.Threading.Tasks;
-using WebApiClient;
-using WebApiClient.Attributes;
+using WebApiClientCore;
+using WebApiClientCore.Attributes;
 
 namespace SiteAccelerator
 {
+    [EmptyUserAgent]   
     [HttpHost("https://site.ip138.com/")]
-    [TraceFilter(OutputTarget = OutputTarget.LoggerFactory)]
-    public interface Iip138Api : IHttpApi
+    [JsonReturn(EnsureMatchAcceptContentType = false)]
+    public interface IIp138Api
     {
-        [JsonReturn]
-        [HttpGet("domain/read.do")]
-        Task<ApiResult<IpItem>> ReadAsync(string domain);
+        [HttpGet("domain/read.do")]       
+        ITask<ApiResult<IpItem>> ReadAsync(string domain);
+    }
+
+    class EmptyUserAgentAttribute : ApiFilterAttribute
+    {
+        public override Task OnRequestAsync(ApiRequestContext context)
+        {
+            context.HttpContext.RequestMessage.Headers.UserAgent.Clear();
+            return Task.CompletedTask;
+        }
+
+        public override Task OnResponseAsync(ApiResponseContext context)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

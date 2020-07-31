@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,37 +44,50 @@ namespace SiteAccelerator
         private async Task RefleshIPAddressAsync()
         {
             using var scope = this.service.CreateScope();
-            var api = scope.ServiceProvider.GetService<Iip138Api>();
-            var domains = scope.ServiceProvider.GetService<IOptionsSnapshot<DomainOptions>>().Value;
+            var ip138Api = scope.ServiceProvider.GetService<IIp138Api>();
+            var siteTestApi = scope.ServiceProvider.GetService<ISiteTestApi>();
+            var sites = scope.ServiceProvider.GetService<IOptionsSnapshot<SitesOptions>>().Value;
 
-            foreach (var domain in domains)
+            foreach (var site in sites)
             {
-                var apiResult = await api.ReadAsync(domain);
-                if (apiResult.Status == false)
+                this.logger.LogInformation($"正在解析域名{site.Host}");
+                var ip138Result = await ip138Api.ReadAsync(site.Host);
+                if (ip138Result.Status == false)
                 {
                     continue;
                 }
 
-                var pingResults = new List<PingReply>();
-                foreach (var item in apiResult.Data)
+                var testResults = new List<TestResult>();
+                foreach (var ipItem in ip138Result.Data)
                 {
+                    var uri = ipItem.ToIpUri(site);
+                    var testResult = new TestResult(ipItem.Ip);
+
                     try
                     {
-                        var pingReply = await item.PingAsync();
-                        this.logger.LogInformation($"ping {item.Ip} -> {pingReply.Status} {pingReply.RoundtripTime}");
-                        pingResults.Add(pingReply);
+                        this.logger.LogInformation($"正在请求到{uri}");
+                        await siteTestApi.GetAsync(uri, site.Host);
+                        testResults.Add(testResult);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.LogWarning($"ping error at {item.Ip}: {ex.Message}");
+                        this.logger.LogError($"请求{uri}异常：{ex.Message}");
+                    }
+                    finally
+                    {
+                        testResult.Finish();
+                        this.logger.LogInformation($"请求{uri}耗时：{testResult.Elapsed}");
                     }
                 }
 
-                var first = pingResults.Where(item => item.Status == IPStatus.Success).OrderBy(item => item.RoundtripTime).FirstOrDefault();
+                var first = testResults
+                    .OrderBy(item => item.Elapsed)
+                    .FirstOrDefault();
+
                 if (first != null)
                 {
-                    this.logger.LogInformation($"set hosts: {first.Address} {domain}");
-                    HostsFile.Set(first.Address, domain);
+                    this.logger.LogInformation($"设置host文件: {first.Ip} {site.Host}");
+                    HostsFile.Set(first.Ip, site.Host);
                 }
             }
         }
