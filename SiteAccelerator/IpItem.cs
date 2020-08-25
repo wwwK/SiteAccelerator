@@ -12,6 +12,11 @@ namespace SiteAccelerator
         {
             var uri = $"{site.Scheme}://{Ip}:{site.Port}{site.PathAndQuery}";
             return new Uri(uri);
-        } 
+        }
+
+        public override string ToString()
+        {
+            return this.Ip;
+        }
     }
 }
