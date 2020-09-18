@@ -46,7 +46,7 @@ namespace SiteAccelerator
             using var scope = this.service.CreateScope();
             var ip138Api = scope.ServiceProvider.GetService<IIp138Api>();
             var siteTestApi = scope.ServiceProvider.GetService<ISiteTestApi>();
-            var sites = scope.ServiceProvider.GetService<IOptionsSnapshot<SitesOptions>>().Value;
+            var sites = scope.ServiceProvider.GetService<IOptionsMonitor<SitesOptions>>().CurrentValue;
 
             foreach (var site in sites)
             {
